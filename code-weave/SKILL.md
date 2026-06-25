@@ -32,12 +32,16 @@ description: 整理代码逻辑，将代码的执行流程梳理为结构化的 
 
 - **只统计有业务功能的节点**。纯技术性操作（异常捕获、类型转换、序列化等）忽略。
 - **入口方法作为第一个节点**，仅标注 `类.方法名`，不加序号和中文描述。
-- **后续步骤用带圈序号** ①②③ 标注执行顺序，节点格式为 `["① 类.方法名\n中文功能名"]`。方法名在第一行，中文描述在第二行，用字符串内换行分隔（不使用 `<br>`）。例如：
-  - `["① OrderValidator.validate\n参数校验"]`
-  - `["② UserService.findById\n查询用户信息"]`
-- **并行子节点**：当某节点向多个同级子步骤展开时，用 `&` 连接（如 `D --> E1 & E2 & E3`），子节点仅标注 `方法名\n中文功能名`（不带序号和类名前缀）。
-- **特殊条件**：如节点有前提条件或开关控制（如"仅编辑时"、"MCC开关"），在中文描述下方追加一行注明。
-- **分支标注**：用 `-- 标签 -->` 表达分支走向（如 `-- 失败 -->`、`-- 通过 -->`），不使用菱形判断节点。
+- **后续节点文字使用中文** 节点格式为 `["类.方法名<br>中文功能名"]`。方法名在第一行，中文描述在第二行，用字符串内换行分隔（不使用 `\n`）。例如：
+  - `["OrderValidator.validate<br>参数校验"]`
+  - `["UserService.findById<br>查询用户信息"]`
+  - `["CommonParamValidator.baseParamCheck<br>基础参数校验"]` 如果类名加方法名太长的话, 格式改为 `["CommonParamValidator<br>.baseParamCheck<br>基础参数校验"]`
+- **并行子节点**：当某节点向多个同级子步骤展开时，用 `&` 连接（如 `D --> E1 & E2 & E3`），子节点仅标注 `方法名<br>中文功能名`（不带序号和类名前缀）。
+- **分支标注**：用 `|标签|` 表达分支走向（如 `|失败|`、`|通过|`）。
+- **使用标准流程图符号**：
+  - 矩形表示处理步骤
+  - 菱形表示判断/分支
+  - 子流程框表示复杂步骤的嵌套
 - **不使用 Start/End 节点**，流程从入口方法自然展开、自然结束。
 - 确保流程图能反映代码的真实执行顺序和分支关系。
 
@@ -45,55 +49,20 @@ description: 整理代码逻辑，将代码的执行流程梳理为结构化的 
 
 ```mermaid
 flowchart TD
-    A["BizEnrollThriftServiceImpl
+    Validate["OrderValidator.validate<br>参数校验"]
 
-.batchValidateBizEnroll"] --> B
-    B["① CommonParamValidator.baseParamCheck
+    Validate --> Check{"Validator.isValid<br>参数有效性校验"}
+    Check -->|失败| ReturnErr["抛异常立即中断返回"]
+    Check -->|通过| GroupByType["UserService.groupByType<br>按类型分组"]
 
-基础参数校验"] -- 失败 --> F["抛 IllegalArgumentException
+    GroupByType --> BizValidate["BizValidator.validate<br>业务校验"]
 
-立即中断返回"]
-    B -- 通过 --> C
-    C["② BizEnrollValidateSupport.groupingForActivityType
+    BizValidate --> E1 & E2 & E3
+    E1["validate01<br>校验逻辑01"]
+    E2["validate02<br>校验逻辑02"]
+    E3["validate03<br>校验逻辑03"]
 
-按活动类型分组"] --> D
-    D["③ BizEnrollValidator.invokeValidate
-
-逐条执行校验"] --> E1 & E2 & E3 & E4 & E5 & E6 & E7 & E8
-    E1["checkScheduleConstraint
-
-档期约束校验"]
-    E2["checkEnrollQualification
-
-报名资质校验"]
-    E3["checkEnrollStatus
-
-提报状态校验
-
-仅编辑时"]
-    E4["checkRequestRepeat
-
-请求内重复
-
-MCC开关"]
-    E5["checkHistoryRepeat
-
-历史记录重复
-
-MCC开关"]
-    E6["checkItemValid
-
-SKU有效性"]
-    E7["checkMarkingTime
-
-打标时间
-
-仅打标活动"]
-    E8["checkAccessRule
-
-准入规则
-
-MCC开关"]
+    E1 & E2 & E3 --> QueryDB["UserService.findById<br>查询数据库"]
 ```
 
 ### 4. 提取配置内容
@@ -260,6 +229,12 @@ order:
 ## 2.3 大的校验节点名称（类.方法名）
 
 [必须，一句话总结功能]
+
+[可选，表格]
+
+[可选，节点配置，如有，用代码块列出]
+
+[可选，如有节点级特殊条件与场景，在此列出，样式：**条件或场景描述**: 描述内容，如果有多条使用列表展示]
 
 ### 2.3.1 小的校验节点1名称（类.方法名）
 
