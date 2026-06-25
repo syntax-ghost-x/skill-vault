@@ -36,34 +36,32 @@ description: 整理代码逻辑，将代码的执行流程梳理为结构化的 
   - `["OrderValidator.validate<br>参数校验"]`
   - `["UserService.findById<br>查询用户信息"]`
   - `["CommonParamValidator.baseParamCheck<br>基础参数校验"]` 如果类名加方法名太长的话, 格式改为 `["CommonParamValidator<br>.baseParamCheck<br>基础参数校验"]`
-- **并行子节点**：当某节点向多个同级子步骤展开时，用 `&` 连接（如 `D --> E1 & E2 & E3`），子节点仅标注 `方法名<br>中文功能名`（不带序号和类名前缀）。
+- **并行子节点**：当某节点向多个同级子步骤展开时，用 `&` 连接（如 `D --> E1 & E2 & E3`），子节点格式与普通节点一致，标注 `类.方法名<br>中文功能名`。
 - **分支标注**：用 `|标签|` 表达分支走向（如 `|失败|`、`|通过|`）。
-- **使用标准流程图符号**：
-  - 矩形表示处理步骤
-  - 菱形表示判断/分支
-  - 子流程框表示复杂步骤的嵌套
+- **特殊条件标注**：如节点有前提条件或开关控制（如"MCC开关"、"异步"等），在中文描述下方用 `<br>` 追加一行注明，如 `["CouponService.validate<br>优惠券校验<br>MCC开关"]`。
 - **不使用 Start/End 节点**，流程从入口方法自然展开、自然结束。
-- **异常返回节点**：如"抛异常立即中断返回"等非业务方法节点，仅标注中文描述，不需要加 `类.方法名`。
+- **异常返回及终止节点**：如"抛异常立即中断返回"、"返回订单创建成功"等非业务方法节点，仅标注中文描述，不需要加 `类.方法名`。
 - 确保流程图能反映代码的真实执行顺序和分支关系。
 
 示例：
 
 ```mermaid
 flowchart TD
-    Validate["OrderValidator.validate<br>参数校验"]
-
-    Validate --> Check{"Validator.isValid<br>参数有效性校验"}
-    Check -->|失败| ReturnErr["抛异常立即中断返回"]
-    Check -->|通过| GroupByType["UserService.groupByType<br>按类型分组"]
-
-    GroupByType --> BizValidate["BizValidator.validate<br>业务校验"]
-
-    BizValidate --> E1 & E2 & E3
-    E1["validate01<br>校验逻辑01"]
-    E2["validate02<br>校验逻辑02"]
-    E3["validate03<br>校验逻辑03"]
-
-    E1 & E2 & E3 --> QueryDB["UserService.findById<br>查询数据库"]
+    Entry["OrderService.createOrder<br>创建订单"]
+    Entry --> ParamCheck["ParamValidator.validate<br>参数校验"]
+    ParamCheck -->|失败| ReturnErr["抛异常立即中断返回"]
+    ParamCheck -->|通过| QueryUser["UserService.getUserById<br>查询用户信息"]
+    QueryUser -->|用户不存在| ReturnErr
+    QueryUser -->|用户存在| StockCheck["InventoryService.checkStock<br>库存校验"]
+    StockCheck -->|库存不足| ReturnErr
+    StockCheck -->|库存充足| PriceCalc["PriceCalculator.calculate<br>价格计算"]
+    PriceCalc --> Coupon["CouponService.validate<br>优惠券校验<br>MCC开关"]
+    Coupon --> SaveOrder["OrderRepository.save<br>保存订单"]
+    SaveOrder --> PayInit & StockDeduct & Notify
+    PayInit["PaymentService.init<br>初始化支付"]
+    StockDeduct["InventoryService.deduct<br>扣减库存"]
+    Notify["MessageService.send<br>发送通知<br>异步"]
+    PayInit & StockDeduct & Notify --> Done["返回订单创建成功"]
 ```
 
 ### 4. 提取配置内容
