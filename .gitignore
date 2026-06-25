@@ -25,3 +25,5 @@ replay_pid*
 
 # .DS_Store（Desktop Services Store）是 macOS 系统自动生成的隐藏文件。
 **/.DS_Store
+
+.idea
